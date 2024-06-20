@@ -6,7 +6,7 @@ import asyncio
 intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
-bot = commands.Bot(command_prefix='/', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -42,10 +42,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def from_url(cls, url, *, loop=None, stream=False):
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-
+        
         if 'entries' in data:
             data = data['entries'][0]
-
+        
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
@@ -72,62 +72,36 @@ async def leave(ctx):
     else:
         await ctx.send("Der Bot ist mit keinem Voice-Channel verbunden.")
 
-playlist = ['song1.mp3', 'song2.mp3', 'song3.mp3']
-current_index = 0  # Starte mit dem ersten Lied in der Playlist
-
 @bot.command(name='play', help='Plays a song from YouTube')
 async def play(ctx, url):
     try:
         voice_client = ctx.guild.voice_client
-        global current_index
-
+        
         if not voice_client:
             await join(ctx)  # Verbinde den Bot mit dem Voice-Channel, falls noch nicht verbunden
             voice_client = ctx.guild.voice_client
-
+        
         player = await YTDLSource.from_url(url, loop=bot.loop, stream=True)
         voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
         await ctx.send(f'Now playing: {player.title}')
     except Exception as e:
         await ctx.send(f'Ein Fehler ist aufgetreten: {e}')
 
-@bot.command(name='next', help='Play the next song in the playlist')
-async def next_song(ctx):
-    global current_index
-    if current_index < len(playlist) - 1:
-        current_index += 1
-        await ctx.send(f'Playing next: {playlist[current_index]}')
-        # Hier deine Logik zum Abspielen des nächsten Songs
-    else:
-        await ctx.send('End of playlist.')
-
-@bot.command(name='prev', help='Play the previous song in the playlist')
-async def prev_song(ctx):
-    global current_index
-    if current_index > 0:
-        current_index -= 1
-        await ctx.send(f'Playing previous: {playlist[current_index]}')
-        # Hier deine Logik zum Abspielen des vorherigen Songs
-    else:
-        await ctx.send('Beginning of playlist.')
-
-@bot.command(name='pause', help='Pauses the currently playing song')
+@bot.command(name='pause', help='This command pauses the song')
 async def pause(ctx):
-    if ctx.voice_client.is_playing():
-        ctx.voice_client.pause()
-        await ctx.send('Playback paused.')
+    voice_client = ctx.guild.voice_client
+    if voice_client.is_playing():
+        voice_client.pause()
     else:
-        await ctx.send('Nothing is playing.')
+        await ctx.send("Der Bot spielt momentan nichts ab.")
 
-@bot.command(name='resume', help='Resumes the currently paused song')
+@bot.command(name='resume', help='Resumes the song')
 async def resume(ctx):
-    if ctx.voice_client.is_paused():
-        ctx.voice_client.resume()
-        await ctx.send('Playback resumed.')
+    voice_client = ctx.guild.voice_client
+    if voice_client is paused():
+        voice_client.resume()
     else:
-        await ctx.send('Playback is not paused.')
-
-
+        await ctx.send("Der Bot hat vorher nichts abgespielt. Nutze den `!play` Befehl.")
 
 @bot.command(name='stop', help='Stops the current song')
 async def stop(ctx):
@@ -135,24 +109,6 @@ async def stop(ctx):
     if voice_client.is_playing():
         voice_client.stop()
     await voice_client.disconnect()
-
-@bot.command(name='songinfo', help='Displays song information')
-async def songinfo(ctx, url: str):
-    if not url:
-        await ctx.send('Please provide a URL.')
-        return
-
-    length_seconds = get_song_length(url)
-    if length_seconds:
-        minutes = length_seconds // 60
-        seconds = length_seconds % 60
-        await ctx.send(f'The song duration is {minutes}:{seconds:02}')
-    else:
-        await ctx.send('Could not retrieve song duration.')
-
-
-
-
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -163,4 +119,4 @@ async def on_command_error(ctx, error):
     print(f'Error: {str(error)}')
 
 
-bot.run('DCTOKEN')
+bot.run('Discord_token')
