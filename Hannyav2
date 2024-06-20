@@ -85,11 +85,6 @@ async def play(ctx, url):
             await join(ctx)  # Verbinde den Bot mit dem Voice-Channel, falls noch nicht verbunden
             voice_client = ctx.guild.voice_client
 
-        if current_index < len(playlist) - 1:
-        current_index += 1
-        await ctx.send(f'Playing next: {playlist[current_index]}')
-        # Hier deine Logik zum Abspielen des nächsten Songs
-
         player = await YTDLSource.from_url(url, loop=bot.loop, stream=True)
         voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
         await ctx.send(f'Now playing: {player.title}')
